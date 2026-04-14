@@ -1,0 +1,59 @@
+//frontend/index.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project WILK Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐺 Project WILK</h1>
+            <p>Acoustic-Edge Sentinel Dashboard</p>
+        </header>
+
+        <div class="card">
+            <h2>Node: WILK_01 (Main Cooling Fan)</h2>
+            
+            <div class="status-indicator">
+                <div id="status-circle" class="circle"></div>
+                <h3 id="status-text">Loading...</h3>
+            </div>
+
+            <div class="log-box">
+                <h4>System Log:</h4>
+                <p id="log-text">Connecting to cloud gateway...</p>
+                <small id="log-time"></small>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Poll the backend every 1 second
+        setInterval(async () => {
+            try {
+                const response = await fetch('http://localhost:5000/status');
+                const data = await response.json();
+
+                // Update UI based on cloud state
+                document.getElementById('status-circle').style.backgroundColor = data.color;
+                document.getElementById('status-text').innerText = data.status;
+                document.getElementById('status-text').style.color = data.color;
+                
+                document.getElementById('log-text').innerText = data.last_event;
+                document.getElementById('log-time').innerText = "Last updated: " + data.timestamp;
+
+                // Add a pulse animation if critical
+                if(data.status.includes("CRITICAL")) {
+                    document.getElementById('status-circle').classList.add('pulse');
+                }
+            } catch (error) {
+                console.error("Error connecting to backend:", error);
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+presentation:
+Set the Stage: Open the HTML file in full screen mode. Point to the left panel (the blue waveform) and explain to the judges that this represents the Edge AI sitting on the machinery, constantly listening and analyzing the baseline acoustics locally.
+
+Point to the Right: Show the right panel. Explain that the cloud dashboard requires zero bandwidth right now because the edge node is only listening, not transmitting.
+
+The Demo: Click the "Inject Acoustic Anomaly" button.
+
+Watch the Reaction: * The waveform will instantly become jagged and turn red (simulating a grinding gear or snapped wire).
+
+The terminal will print out the AI's "thought process" locally.
+
+After a 1-second delay (simulating the transmission), the Cloud Dashboard will flash a pulsing red warning.

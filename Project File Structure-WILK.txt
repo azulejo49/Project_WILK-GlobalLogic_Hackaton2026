@@ -1,0 +1,13 @@
+Project File Structure-WILK
+
+project-wilk/
+├── backend/
+│   ├── app.py                  # The cloud server (Flask)
+│   └── requirements.txt        # Python dependencies
+├── edge_node/
+│   └── simulate_anomaly.py     # Simulates the Edge AI detecting a fault
+├── frontend/
+│   ├── index.html              # The live dashboard UI
+│   └── style.css               # Dashboard styling
+├── architecture.md             # Technical write-up for the judges
+└── README.md                   # Setup and run instructions
