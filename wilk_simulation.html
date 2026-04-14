@@ -1,0 +1,336 @@
+//wilk_simulation.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project WILK - PoC Simulation</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --text-main: #c9d1d9;
+            --accent-blue: #58a6ff;
+            --status-green: #238636;
+            --status-red: #da3633;
+            --border-color: #30363d;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            color: var(--accent-blue);
+            margin: 0 0 5px 0;
+            font-size: 2.5rem;
+        }
+
+        header p {
+            color: #8b949e;
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            color: var(--text-main);
+        }
+
+        /* Acoustic Visualizer Styles */
+        #visualizer {
+            width: 100%;
+            height: 200px;
+            background-color: #000;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Status Styles */
+        .status-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+        }
+
+        .status-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background-color: var(--status-green);
+            margin-bottom: 20px;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 0 20px rgba(35, 134, 54, 0.4);
+        }
+
+        .status-text {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--status-green);
+            text-align: center;
+        }
+
+        /* Pulse Animation for Anomaly */
+        .pulse-red {
+            background-color: var(--status-red) !important;
+            animation: pulse-animation 1s infinite;
+        }
+
+        @keyframes pulse-animation {
+            0% { box-shadow: 0 0 0 0 rgba(218, 54, 51, 0.7); }
+            70% { box-shadow: 0 0 0 25px rgba(218, 54, 51, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(218, 54, 51, 0); }
+        }
+
+        /* Controls Styles */
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.1s, filter 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .btn-trigger {
+            background-color: var(--status-red);
+            color: white;
+        }
+
+        .btn-trigger:hover {
+            filter: brightness(1.2);
+        }
+
+        .btn-reset {
+            background-color: var(--status-green);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            filter: brightness(1.2);
+        }
+
+        /* Log Terminal Styles */
+        .terminal {
+            background-color: #000;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 15px;
+            border-radius: 8px;
+            height: 120px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            margin-top: auto;
+        }
+        
+        .terminal p {
+            margin: 2px 0;
+            font-size: 0.9rem;
+        }
+        .log-error {
+            color: #ff4444;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🐺 Project WILK</h1>
+        <p>Acoustic-Edge Sentinel | Live PoC Simulation</p>
+    </header>
+
+    <div class="dashboard">
+        <div class="panel">
+            <h2>Live Edge Telemetry: WILK_NODE_01</h2>
+            <canvas id="visualizer"></canvas>
+            
+            <div class="terminal" id="terminal">
+                <p>> System Initialized.</p>
+                <p>> Loading TinyML Acoustic Model...</p>
+                <p>> Model loaded. Listening to environment.</p>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Cloud Infrastructure Status</h2>
+            <div class="status-container">
+                <div class="status-circle" id="statusCircle"></div>
+                <div class="status-text" id="statusText">SYSTEM HEALTHY</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-trigger" onclick="triggerAnomaly()">⚠️ Inject Acoustic Anomaly</button>
+        <button class="btn-reset" onclick="resetSystem()">🔄 Reset System</button>
+    </div>
+
+    <script>
+        // --- Canvas & Audio Visualization Logic ---
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        const terminal = document.getElementById('terminal');
+        const statusCircle = document.getElementById('statusCircle');
+        const statusText = document.getElementById('statusText');
+
+        // Resize canvas to fit container
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth - 40;
+            canvas.height = 200;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        let isAnomaly = false;
+        let animationId;
+
+        function drawWaveform() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            // Set line color based on state
+            ctx.strokeStyle = isAnomaly ? '#ff4444' : '#58a6ff';
+
+            const sliceWidth = canvas.width / 100;
+            let x = 0;
+
+            for (let i = 0; i < 100; i++) {
+                // Base noise (healthy fan sound)
+                let amplitude = Math.random() * 20 + 10; 
+                
+                // If anomaly, create jagged, high-frequency spikes
+                if (isAnomaly) {
+                    amplitude = Math.random() * 80 + 40;
+                }
+
+                const y = (canvas.height / 2) + (Math.random() > 0.5 ? amplitude : -amplitude);
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+
+                x += sliceWidth;
+            }
+
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+
+            // Loop animation
+            animationId = requestAnimationFrame(drawWaveform);
+        }
+
+        // Start initial waveform
+        drawWaveform();
+
+        // --- Logic to update logs and status ---
+        function addLog(message, isError = false) {
+            const time = new Date().toLocaleTimeString();
+            const p = document.createElement('p');
+            p.innerText = `> [${time}] ${message}`;
+            if (isError) p.className = 'log-error';
+            terminal.appendChild(p);
+            terminal.scrollTop = terminal.scrollHeight; // Auto-scroll
+        }
+
+        function triggerAnomaly() {
+            if (isAnomaly) return; // Prevent double trigger
+            
+            isAnomaly = true;
+            addLog("HIGH FREQUENCY ACOUSTIC DISTURBANCE DETECTED", true);
+            
+            // Simulate AI processing delay (edge computing)
+            setTimeout(() => {
+                addLog("Running local classification...", false);
+            }, 500);
+
+            setTimeout(() => {
+                const confidence = (92 + Math.random() * 7).toFixed(1);
+                addLog(`CRITICAL: Bearing Failure Signature Matched. (Confidence: ${confidence}%)`, true);
+                addLog("Transmitting MQTT Alert to Cloud...", false);
+                
+                // Update Cloud Dashboard UI
+                statusCircle.classList.add('pulse-red');
+                statusText.innerText = "CRITICAL FAILURE IMMINENT";
+                statusText.style.color = "var(--status-red)";
+            }, 1200);
+        }
+
+        function resetSystem() {
+            isAnomaly = false;
+            
+            // Reset Dashboard UI
+            statusCircle.classList.remove('pulse-red');
+            statusText.innerText = "SYSTEM HEALTHY";
+            statusText.style.color = "var(--status-green)";
+            
+            addLog("System reset. Resuming normal monitoring.");
+        }
+
+        // Log initial healthy state
+        setInterval(() => {
+            if (!isAnomaly && Math.random() > 0.7) {
+                addLog("Acoustic baseline normal. Model confidence: 99.9%");
+            }
+        }, 3000);
+
+    </script>
+</body>
+</html>
