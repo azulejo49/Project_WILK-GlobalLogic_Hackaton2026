@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WILK Command Center | Multi-Modal AI Sentinel</title>
+    <style>
+        :root {
+            --bg-base: #020617;
+            --bg-panel: #0f172a;
+            --border-glow: #1e293b;
+            --text-main: #e2e8f0;
+            --text-muted: #64748b;
+            --accent-blue: #38bdf8;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+            --accent-yellow: #eab308;
+            --font-mono: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-y: auto; 
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-glow);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .logo-area h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--accent-blue);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .system-clock {
+            font-family: var(--font-mono);
+            font-size: 1.2rem;
+            color: var(--accent-green);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 350px 1fr 350px;
+            gap: 15px;
+            flex-grow: 1;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-glow);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .panel-header {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-glow);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .badge {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: var(--accent-green);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .badge.danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+        }
+
+        .scope-container {
+            flex: 1;
+            min-height: 120px;
+            background: #000;
+            border-radius: 4px;
+            border: 1px solid #334155;
+            position: relative;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: block;
+        }
+
+        .scope-label {
+            position: absolute;
+            top: 5px; left: 5px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.7);
+            z-index: 10;
+        }
+
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .metric {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #1e293b;
+        }
+
+        .metric-label { font-size: 0.7rem; color: var(--text-muted); }
+        .metric-value { font-family: var(--font-mono); font-size: 1.3rem; margin-top: 4px; }
+
+        /* Media Containers */
+        .media-box {
+            height: 190px; 
+            background: #000;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #334155;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .media-overlay {
+            position: absolute;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            text-align: center;
+            z-index: 5;
+        }
+
+        .media-img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: none;
+            z-index: 2;
+        }
+
+        /* Static Cam Timestamp Overlay */
+        .cam-timestamp {
+            position: absolute;
+            bottom: 5px; right: 5px;
+            color: #fff;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            background: rgba(0,0,0,0.8);
+            padding: 2px 5px;
+            border: 1px solid #ef4444;
+            z-index: 10;
+            display: none;
+        }
+
+        /* --- REALISTIC DRONE HUD --- */
+        .drone-hud {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: none;
+            font-family: var(--font-mono);
+            color: #22c55e;
+            text-shadow: 1px 1px 2px #000;
+            background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.4) 100%); /* Vignette */
+        }
+
+        .hud-top-bar {
+            position: absolute;
+            top: 10px; left: 10px; right: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .hud-rec {
+            color: #ef4444;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .hud-rec-dot {
+            width: 8px; height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        .hud-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px; height: 120px;
+        }
+
+        /* Artificial Horizon Jitter */
+        .hud-pitch-lines {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 100%;
+            transition: transform 0.1s ease-out;
+        }
+
+        .pitch-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.6rem;
+        }
+
+        .pitch-line .line {
+            width: 30px; height: 1px;
+            background: rgba(34, 197, 94, 0.8);
+            box-shadow: 1px 1px 2px #000;
+        }
+
+        .center-cross {
+            width: 20px; height: 2px;
+            background: #22c55e;
+            position: relative;
+        }
+        .center-cross::after {
+            content: ''; position: absolute;
+            left: 50%; top: -5px; bottom: -5px; width: 2px;
+            background: #22c55e;
+            transform: translateX(-50%);
+        }
+
+        .hud-altimeter {
+            position: absolute;
+            right: 15px; top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .alt-tape {
+            border-left: 2px solid rgba(34, 197, 94, 0.5);
+            padding-left: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.65rem;
+        }
+
+        .alt-val.highlight {
+            font-size: 0.8rem;
+            font-weight: bold;
+            background: rgba(34, 197, 94, 0.3);
+            padding: 2px 4px;
+            border: 1px solid #22c55e;
+        }
+
+        .hud-bottom-bar {
+            position: absolute;
+            bottom: 10px; left: 10px; right: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+        }
+
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+
+        /* Realistic Industrial FLIR Thermal Effect (Ironbow) */
+        .thermal-effect {
+            filter: sepia(1) hue-rotate(280deg) saturate(350%) contrast(1.8) brightness(0.9) invert(0.1);
+        }
+
+        /* Event Terminal */
+        .terminal {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            flex: 1;
+            min-height: 150px;
+            overflow-y: auto;
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #1e293b;
+        }
+        
+        .terminal p { margin: 4px 0; line-height: 1.4; }
+        .log-sys { color: var(--text-muted); }
+        .log-mqtt { color: var(--accent-blue); }
+        .log-warn { color: var(--accent-yellow); }
+        .log-err { color: var(--accent-red); }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .btn-trigger { background-color: var(--accent-red); color: white; }
+        .btn-trigger:hover { background-color: #b91c1c; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+        .btn-reset { background-color: #334155; color: white; }
+        .btn-reset:hover { background-color: #475569; }
+
+        .alert-flash { animation: flashBg 1s infinite; }
+        @keyframes flashBg { 
+            0% { background-color: rgba(239, 68, 68, 0.1); } 
+            50% { background-color: rgba(239, 68, 68, 0.3); } 
+            100% { background-color: rgba(239, 68, 68, 0.1); } 
+        }
+
+        @media (max-width: 1200px) {
+            .grid-container { grid-template-columns: 1fr 1fr; }
+            .panel[style*="grid-row: span 2;"] { grid-row: auto !important; }
+            #alertPanel { grid-column: span 2; }
+        }
+        @media (max-width: 768px) {
+            .grid-container { grid-template-columns: 1fr; }
+            #alertPanel { grid-column: span 1; }
+            .telemetry-grid { grid-template-columns: 1fr; }
+            header { flex-direction: column; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <h1>🐺 WILK // Command Center</h1>
+        </div>
+        <div class="system-clock" id="sysClock">00:00:00 UTC</div>
+    </header>
+
+    <div class="grid-container">
+        
+        <div class="panel" style="grid-row: span 2;">
+            <div class="panel-header">
+                <span>1. AI Edge Sensing (Node 01)</span>
+                <span class="badge" id="aiStatus">ACTIVE</span>
+            </div>
+            
+            <div class="scope-container">
+                <span class="scope-label">ACOUSTIC (MEMS MIC)</span>
+                <canvas id="scopeAcoustic"></canvas>
+            </div>
+            
+            <div class="scope-container">
+                <span class="scope-label">VIBRATION (MPU6050)</span>
+                <canvas id="scopeVibration"></canvas>
+            </div>
+
+            <div class="telemetry-grid" style="margin-top: 10px;">
+                <div class="metric">
+                    <div class="metric-label">Max G-Force</div>
+                    <div class="metric-value" id="valGforce" style="color: var(--accent-green);">0.02G</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Acoustic Class</div>
+                    <div class="metric-value" id="valAcoustic" style="color: var(--accent-green);">NORMAL</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <span>2. Visual Verification</span>
+                <span class="badge" id="camBadge">DEEP SLEEP</span>
+            </div>
+            <div class="media-box">
+                <div class="media-overlay" id="camOverlay">CAMERA OFFLINE<br><small>Awaiting Trigger</small></div>
+                <img id="camImg" class="media-img" src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop" alt="Structural Fracture Snap">
+                <div class="cam-timestamp" id="camTimestamp"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <span>4. Autonomous UAV Feed</span>
+                <span class="badge" id="uavBadge" style="background-color: transparent; color: var(--text-muted);">DOCKED</span>
+            </div>
+            <div class="media-box" id="droneBox">
+                <div class="media-overlay" id="droneOverlay">NO SIGNAL<br><small>Drone Docked at Base</small></div>
+                
+                <img id="droneImg" class="media-img thermal-effect" src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?q=80&w=800&auto=format&fit=crop" alt="Thermal Drone Feed">
+                
+                <div class="drone-hud" id="droneHud">
+                    <div class="hud-top-bar">
+                        <div class="hud-rec"><div class="hud-rec-dot"></div> REC <span id="recTimer">00:00:00</span></div>
+                        <div id="gpsCoords">GPS 14 S 52.2297° E 21.0122°</div>
+                        <div>UAV BATT: 82% 14.8V</div>
+                    </div>
+                    
+                    <div class="hud-center">
+                        <div class="hud-pitch-lines" id="hudPitch">
+                            <div class="pitch-line"><span>10</span><div class="line"></div><span>10</span></div>
+                            <div class="pitch-line center-cross"></div>
+                            <div class="pitch-line"><span>-10</span><div class="line"></div><span>-10</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="hud-altimeter">
+                        <div class="alt-tape">
+                            <div class="alt-val">122</div>
+                            <div class="alt-val highlight">120</div>
+                            <div class="alt-val">118</div>
+                        </div>
+                        <div>ALT</div>
+                    </div>
+                    
+                    <div class="hud-bottom-bar">
+                        <span>MODE: THERMAL (FLIR)</span>
+                        <span>PAL: IRONBOW</span>
+                        <span>SD: 45GB</span>
+                    </div>
+                </div>
+            </div>
+            <div class="telemetry-grid">
+                <div class="metric">
+                    <div class="metric-label">Distance to Target</div>
+                    <div class="metric-value" id="uavDist">---</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">UAV Telemetry</div>
+                    <div class="metric-value" id="uavAlt">---</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <span>3. Solar Power & Environment</span>
+                <span class="badge">STABLE</span>
+            </div>
+            <div class="telemetry-grid">
+                <div class="metric">
+                    <div class="metric-label">Solar Output</div>
+                    <div class="metric-value" id="valSolar" style="color: var(--accent-green);">5.21 V</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Battery Level</div>
+                    <div class="metric-value" id="valBatt" style="color: var(--accent-green);">94%</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Local Wind</div>
+                    <div class="metric-value">12 km/h</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Surface Temp</div>
+                    <div class="metric-value">14 °C</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel" id="alertPanel">
+            <div class="panel-header">
+                <span>5. MQTT Event Stream</span>
+                <span class="badge" id="netBadge">CONNECTED</span>
+            </div>
+            <div class="terminal" id="terminal">
+                <p class="log-sys">>> SYSTEM INITIALIZED</p>
+                <p class="log-sys">>> CONNECTED TO CLOUD GATEWAY</p>
+                <p class="log-mqtt">{"topic": "wilk/01/sys", "status": "online"}</p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="controls">
+        <button class="btn-trigger" onclick="runSimulation()">⚠️ Inject Catastrophic Failure</button>
+        <button class="btn-reset" onclick="resetSystem()">🔄 Clear Protocols</button>
+    </div>
+
+    <script>
+        // --- Clock Logic ---
+        setInterval(() => {
+            document.getElementById('sysClock').innerText = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+        }, 1000);
+
+        // --- Canvas Scopes Logic ---
+        const scopeAc = document.getElementById('scopeAcoustic');
+        const ctxAc = scopeAc.getContext('2d');
+        const scopeVib = document.getElementById('scopeVibration');
+        const ctxVib = scopeVib.getContext('2d');
+
+        let isAnomaly = false;
+
+        function resizeCanvas() {
+            const rectAc = scopeAc.parentElement.getBoundingClientRect();
+            scopeAc.width = rectAc.width;
+            scopeAc.height = rectAc.height;
+
+            const rectVib = scopeVib.parentElement.getBoundingClientRect();
+            scopeVib.width = rectVib.width;
+            scopeVib.height = rectVib.height;
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 100); 
+
+        function drawScope(ctx, canvas, baseAmp, anomalyAmp, color, speed) {
+            if (canvas.width === 0) return;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.strokeStyle = isAnomaly ? '#ef4444' : color;
+
+            const sliceWidth = canvas.width / 50;
+            let x = 0;
+
+            for (let i = 0; i < 50; i++) {
+                let amplitude = isAnomaly ? (Math.random() * anomalyAmp) : (Math.random() * baseAmp);
+                const y = (canvas.height / 2) + (Math.random() > 0.5 ? amplitude : -amplitude);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                x += sliceWidth;
+            }
+            ctx.stroke();
+        }
+
+        function renderLoop() {
+            drawScope(ctxAc, scopeAc, 10, 50, '#38bdf8', 1);
+            drawScope(ctxVib, scopeVib, 3, 50, '#22c55e', 2);
+            requestAnimationFrame(renderLoop);
+        }
+        renderLoop();
+
+        // --- Terminal Logic ---
+        const terminal = document.getElementById('terminal');
+        function addLog(msg, type = "mqtt") {
+            const time = new Date().toISOString().substring(11, 23);
+            const p = document.createElement('p');
+            p.className = `log-${type}`;
+            p.innerText = `[${time}] ${msg}`;
+            terminal.appendChild(p);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // --- Normal Telemetry Loop ---
+        let telemetryInterval = setInterval(() => {
+            if (!isAnomaly) {
+                document.getElementById('valGforce').innerText = (0.01 + Math.random() * 0.02).toFixed(2) + "G";
+                document.getElementById('valSolar').innerText = (5.1 + Math.random() * 0.2).toFixed(2) + " V";
+                if(Math.random() > 0.8) {
+                    addLog(`{"topic":"wilk/01/hb", "battery": 94, "ai_conf": 99.9}`, "sys");
+                }
+            }
+        }, 1000);
+
+        // --- Drone HUD Animation Logic ---
+        let recSeconds = 0;
+        let hudAnimInterval;
+        
+        function startDroneHUD() {
+            recSeconds = 0;
+            document.getElementById('droneHud').style.display = "block";
+            
+            hudAnimInterval = setInterval(() => {
+                // Update Timer
+                recSeconds++;
+                const mins = String(Math.floor(recSeconds / 60)).padStart(2, '0');
+                const secs = String(recSeconds % 60).padStart(2, '0');
+                document.getElementById('recTimer').innerText = `00:${mins}:${secs}`;
+                
+                // Jitter Pitch & Roll (Simulating wind)
+                const pitchJitter = (Math.random() * 4 - 2).toFixed(1); 
+                const rollJitter = (Math.random() * 2 - 1).toFixed(1);
+                document.getElementById('hudPitch').style.transform = `rotate(${rollJitter}deg) translateY(${pitchJitter}px)`;
+                
+                // Jitter GPS Sub-coordinates
+                const gpsDec1 = Math.floor(1000 + Math.random() * 8999);
+                const gpsDec2 = Math.floor(1000 + Math.random() * 8999);
+                document.getElementById('gpsCoords').innerText = `GPS 14 S 52.${gpsDec1}° E 21.${gpsDec2}°`;
+            }, 1000);
+        }
+
+        // --- The Core Simulation Sequence ---
+        let uavInterval;
+
+        function runSimulation() {
+            if (isAnomaly) return;
+            isAnomaly = true;
+            resizeCanvas();
+
+            // Phase 1: Edge Detection
+            document.getElementById('aiStatus').innerText = "CRITICAL";
+            document.getElementById('aiStatus').className = "badge danger";
+            document.getElementById('valGforce').innerText = (4.5 + Math.random() * 2).toFixed(2) + "G";
+            document.getElementById('valGforce').style.color = "var(--accent-red)";
+            document.getElementById('valAcoustic').innerText = "FRACTURE MATCH";
+            document.getElementById('valAcoustic').style.color = "var(--accent-red)";
+            
+            document.getElementById('alertPanel').classList.add('alert-flash');
+            addLog(`{"topic":"wilk/01/alert", "event": "ACOUSTIC_SPIKE_DETECTION", "conf": 0.98}`, "err");
+
+            // Phase 2: Visual & Power Impact
+            setTimeout(() => {
+                document.getElementById('valSolar').innerText = "0.00 V"; 
+                document.getElementById('valSolar').style.color = "var(--accent-red)";
+                
+                document.getElementById('camBadge').innerText = "ACTIVE";
+                document.getElementById('camOverlay').style.display = "none";
+                document.getElementById('camImg').style.display = "block";
+                
+                // Precise static timestamp
+                const snapTime = new Date().toISOString().replace('T', ' ').substring(0, 23) + ' UTC';
+                document.getElementById('camTimestamp').innerText = "NODE_01_SNAP_" + snapTime;
+                document.getElementById('camTimestamp').style.display = "block";
+
+                addLog(`[ACTION] ESP32-CAM Awoken. Payload compressed. Uploading image...`, "sys");
+            }, 1000);
+
+            // Phase 3: Cloud Escalation
+            setTimeout(() => {
+                addLog(`[GATEWAY] MULTI-MODAL EVENT CONFIRMED.`, "err");
+                addLog(`[GATEWAY] Dispatching UAV Protocol to Sector 4.`, "warn");
+                
+                document.getElementById('uavBadge').innerText = "DISPATCHED";
+                document.getElementById('uavBadge').style.color = "var(--accent-yellow)";
+                document.getElementById('droneOverlay').innerHTML = "UAV DISPATCHED<br><small>En route to target area...</small>";
+                document.getElementById('droneOverlay').style.color = "var(--accent-yellow)";
+            }, 2500);
+
+            // Phase 4: UAV Flight
+            setTimeout(() => {
+                let dist = 1200;
+                let alt = 0;
+                
+                uavInterval = setInterval(() => {
+                    dist -= 85;
+                    alt += Math.min(10, 150 - alt); 
+                    
+                    if (dist <= 0) {
+                        clearInterval(uavInterval);
+                        // Phase 5: UAV Arrives & HUD Activates
+                        document.getElementById('uavBadge').innerText = "ON SITE (THERMAL)";
+                        document.getElementById('uavBadge').style.color = "var(--accent-red)";
+                        document.getElementById('uavDist').innerText = "0 m";
+                        document.getElementById('uavDist').style.color = "var(--accent-red)";
+                        
+                        document.getElementById('droneOverlay').style.display = "none";
+                        document.getElementById('droneImg').style.display = "block";
+                        
+                        startDroneHUD(); // Start the realistic HUD animation
+                        
+                        addLog(`{"topic":"uav/base", "status": "ARRIVED", "payload": "THERMAL_STREAM_ACTIVE"}`, "mqtt");
+                    } else {
+                        document.getElementById('uavDist').innerText = dist + " m";
+                        document.getElementById('uavAlt').innerText = "Alt: " + alt + "m";
+                    }
+                }, 200);
+            }, 3000);
+        }
+
+        // --- Reset Logic ---
+        function resetSystem() {
+            isAnomaly = false;
+            clearInterval(uavInterval);
+            clearInterval(hudAnimInterval);
+            
+            document.getElementById('alertPanel').classList.remove('alert-flash');
+            document.getElementById('aiStatus').innerText = "ACTIVE";
+            document.getElementById('aiStatus').className = "badge";
+            
+            document.getElementById('valGforce').style.color = "var(--accent-green)";
+            document.getElementById('valAcoustic').innerText = "NORMAL";
+            document.getElementById('valAcoustic').style.color = "var(--accent-green)";
+            document.getElementById('valSolar').style.color = "var(--accent-green)";
+            
+            document.getElementById('camBadge').innerText = "DEEP SLEEP";
+            document.getElementById('camImg').style.display = "none";
+            document.getElementById('camTimestamp').style.display = "none";
+            document.getElementById('camOverlay').style.display = "block";
+            
+            document.getElementById('uavBadge').innerText = "DOCKED";
+            document.getElementById('uavBadge').style.color = "var(--text-muted)";
+            document.getElementById('droneImg').style.display = "none";
+            document.getElementById('droneHud').style.display = "none";
+            
+            document.getElementById('droneOverlay').style.display = "block";
+            document.getElementById('droneOverlay').innerHTML = "NO SIGNAL<br><small>Drone Docked at Base</small>";
+            document.getElementById('droneOverlay').style.color = "var(--text-muted)";
+            
+            document.getElementById('uavDist').innerText = "---";
+            document.getElementById('uavDist').style.color = "var(--text-main)";
+            document.getElementById('uavAlt').innerText = "---";
+            
+            addLog(">> SYSTEM OVERRIDE: PROTOCOLS RESET. RESUMING NORMAL OPERATION.", "sys");
+            setTimeout(resizeCanvas, 50);
+        }
+    </script>
+</body>
+</html>
