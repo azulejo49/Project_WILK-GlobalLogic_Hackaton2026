@@ -1,6 +1,8 @@
 # Project WILK: a Multi-Modal Edge AI Sentinel 🐺
 
-**Evolve Hack 2026 | Theme 3: Intelligence in Motion**
+**Evolve Hack 2026 | Theme 3: Intelligence in Motion** 
+
+Disclaimer: Contest Project Proposal
 
 Project WILK is a decentralized swarm of solar-powered edge nodes that use TinyML (Edge AI) to "listen" to the acoustic signatures, vibration detection, solar power telemetry, camera verification, Drone Auto Dispatch of industrial machinery and civil infrastructure.
 By processing sound locally on the edge, it detects micro-anomalies and predicts catastrophic failures before they happen, sending low-bandwidth alerts to a central dashboard.
